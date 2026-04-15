@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
   if (exportCsv) {
     let filtered = allCosts
-    if (start) filtered = filtered.filter(g => (g.generated_at ?? '') >= start)
-    if (end)   filtered = filtered.filter(g => (g.generated_at ?? '') <= end + 'T23:59:59')
+    if (start) filtered = filtered.filter((g: any) => (g.generated_at ?? '') >= start)
+    if (end)   filtered = filtered.filter((g: any) => (g.generated_at ?? '') <= end + 'T23:59:59')
 
     const rows = filtered.map((g: any) => [
       g.generated_at, g.user?.username ?? '', g.content_type, g.prompt_tokens,
