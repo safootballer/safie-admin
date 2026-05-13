@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { fetchMatchPreview } from '@/lib/playhq'
+import { detectCompetition } from '@/lib/detectCompetition'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -34,25 +35,35 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      // Auto-detect competition and grade from team names
+      const detected = detectCompetition(
+        preview.competition,
+        preview.home_team,
+        preview.away_team,
+      )
+
       await prisma.matchLink.create({
         data: {
-          playhq_url:  url.trim(),
-          match_id:    matchId,
-          home_team:   preview.home_team,
-          away_team:   preview.away_team,
-          competition: preview.competition,
-          grade_id:    preview.grade_id,
-          grade_name:  preview.grade_name,
-          date:        preview.date,
-          venue:       preview.venue,
-          added_by:    addedBy,
-          added_at:    new Date().toISOString(),
-          is_active:   1,
+          playhq_url:    url.trim(),
+          match_id:      matchId,
+          home_team:     preview.home_team,
+          away_team:     preview.away_team,
+          competition:   detected.competition,
+          grade_name:    preview.grade_name,
+          amateur_grade: detected.amateurGrade ?? null,
+          sanfl_grade:   detected.sanflGrade ?? null,
+          date:          preview.date,
+          venue:         preview.venue,
+          added_by:      addedBy,
+          added_at:      new Date().toISOString(),
+          is_active:     1,
         },
       })
+
+      const gradeLabel = detected.amateurGrade ?? detected.sanflGrade ?? ''
       results.push({
         url, status: 'success',
-        message: `Saved: ${preview.home_team} vs ${preview.away_team} (${preview.grade_name ?? preview.competition})`
+        message: `Saved: ${preview.home_team} vs ${preview.away_team} → ${detected.competition}${gradeLabel ? ' · ' + gradeLabel : ''}`,
       })
     } catch (e: any) {
       results.push({ url, status: 'error', message: e.message })
