@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react'
 
 export default function MatchesPage() {
-  const [data, setData]       = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [page, setPage]       = useState(1)
-  const [expanded, setExpanded] = useState<number | null>(null)
+  const [data, setData]           = useState<any>(null)
+  const [loading, setLoading]     = useState(true)
+  const [page, setPage]           = useState(1)
+  const [expanded, setExpanded]   = useState<number | null>(null)
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<{ type: string; text: string } | null>(null)
 
   async function load(p = 1) {
     setLoading(true)
@@ -21,13 +23,73 @@ export default function MatchesPage() {
     load(page)
   }
 
+  async function autoPublishAll() {
+    if (!confirm(`This will auto-generate and publish reports for ALL active matches. Continue?`)) return
+    setPublishing(true)
+    setPublishResult(null)
+    try {
+      const res  = await fetch('/api/auto-publish-all', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setPublishResult({
+          type: 'success',
+          text: `🚀 Pipeline started for ${data.total} matches! Reports are generating in the background. Check your website in a few minutes.`,
+        })
+      } else {
+        setPublishResult({ type: 'error', text: `❌ ${data.error ?? 'Failed to start pipeline'}` })
+      }
+    } catch (e: any) {
+      setPublishResult({ type: 'error', text: `❌ ${e.message}` })
+    }
+    setPublishing(false)
+  }
+
   return (
     <div className="fade-up">
-      <div className="page-title">🏈 Match Management</div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div>
+          <div className="page-title" style={{ marginBottom: '0.25rem' }}>🏈 Match Management</div>
+          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)' }}>
+            Total matches: <strong style={{ color: '#fff' }}>{data?.total ?? '...'}</strong>
+          </div>
+        </div>
 
-      <div className="alert-info" style={{ marginBottom: '1.5rem' }}>
-        Total matches in database: <strong>{data?.total ?? '...'}</strong>
+        {/* Auto Publish All button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+          <button
+            onClick={autoPublishAll}
+            disabled={publishing}
+            style={{
+              background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
+              color: '#000', border: 'none', borderRadius: 10,
+              padding: '0.75rem 1.5rem',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 900, fontSize: '1rem',
+              letterSpacing: '0.04em', cursor: publishing ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+            }}
+          >
+            {publishing ? '⏳ Generating...' : '🚀 Auto Publish All'}
+          </button>
+          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', textAlign: 'right' }}>
+            Generates & publishes reports for all matches
+          </div>
+        </div>
       </div>
+
+      {/* Result message */}
+      {publishResult && (
+        <div style={{
+          padding: '1rem 1.25rem', borderRadius: 10, marginBottom: '1.5rem',
+          background: publishResult.type === 'success' ? 'rgba(5,46,22,0.8)' : 'rgba(45,0,0,0.8)',
+          border: `1px solid ${publishResult.type === 'success' ? '#4ade80' : '#f87171'}`,
+          color: publishResult.type === 'success' ? '#4ade80' : '#f87171',
+          fontSize: '0.875rem', fontWeight: 500, lineHeight: 1.5,
+        }}>
+          {publishResult.text}
+        </div>
+      )}
 
       {loading ? <p style={{ color: 'rgba(255,255,255,0.4)' }}>Loading...</p> : (
         <>
@@ -91,7 +153,6 @@ export default function MatchesPage() {
             ))}
           </div>
 
-          {/* Pagination */}
           {data?.pages > 1 && (
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
               {Array.from({ length: data.pages }, (_, i) => i + 1).map(p => (
