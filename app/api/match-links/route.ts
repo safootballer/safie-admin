@@ -36,19 +36,24 @@ export async function POST(req: NextRequest) {
 
       await prisma.matchLink.create({
         data: {
-          playhq_url: url.trim(),
-          match_id: matchId,
-          home_team: preview.home_team,
-          away_team: preview.away_team,
+          playhq_url:  url.trim(),
+          match_id:    matchId,
+          home_team:   preview.home_team,
+          away_team:   preview.away_team,
           competition: preview.competition,
-          date: preview.date,
-          venue: preview.venue,
-          added_by: addedBy,
-          added_at: new Date().toISOString(),
-          is_active: 1,
+          grade_id:    preview.grade_id,
+          grade_name:  preview.grade_name,
+          date:        preview.date,
+          venue:       preview.venue,
+          added_by:    addedBy,
+          added_at:    new Date().toISOString(),
+          is_active:   1,
         },
       })
-      results.push({ url, status: 'success', message: `Saved: ${preview.home_team} vs ${preview.away_team}` })
+      results.push({
+        url, status: 'success',
+        message: `Saved: ${preview.home_team} vs ${preview.away_team} (${preview.grade_name ?? preview.competition})`
+      })
     } catch (e: any) {
       results.push({ url, status: 'error', message: e.message })
     }

@@ -65,6 +65,8 @@ model MatchLink {
   home_team   String? @db.VarChar(255)
   away_team   String? @db.VarChar(255)
   competition String? @db.VarChar(255)
+  grade_id    String? @db.VarChar(255)
+  grade_name  String? @db.VarChar(255)
   date        String? @db.VarChar(255)
   venue       String? @db.VarChar(255)
   added_by    String? @db.VarChar(255)
@@ -72,4 +74,32 @@ model MatchLink {
   is_active   Int?    @default(1)
 
   @@map("match_links")
+}
+
+model LeagueMapping {
+  id             Int     @id @default(autoincrement())
+  playhq_name    String  @unique @db.VarChar(500)
+  grade_id       String? @db.VarChar(255)
+  competition    String  @db.VarChar(255)
+  amateur_grade  String? @db.VarChar(255)
+  country_league String? @db.VarChar(255)
+  sanfl_grade    String? @db.VarChar(255)
+
+  @@map("league_mappings")
+}
+
+model AflMatchLink {
+  id          Int     @id @default(autoincrement())
+  afl_url     String? @db.VarChar(500)
+  match_id    String  @unique @db.VarChar(255)
+  home_team   String? @db.VarChar(255)
+  away_team   String? @db.VarChar(255)
+  competition String? @db.VarChar(255)
+  date        String? @db.VarChar(255)
+  venue       String? @db.VarChar(255)
+  added_by    String? @db.VarChar(255)
+  added_at    String? @db.VarChar(255)
+  is_active   Int?    @default(1)
+
+  @@map("afl_match_links")
 }

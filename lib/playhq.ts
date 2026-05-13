@@ -14,7 +14,13 @@ query gameView($gameId: ID!) {
     home { ... on DiscoverTeam { name } }
     away { ... on DiscoverTeam { name } }
     allocation { court { venue { name } } }
-    round { grade { season { competition { name } } } }
+    round {
+      grade {
+        id
+        name
+        season { competition { name } }
+      }
+    }
   }
 }
 `
@@ -30,11 +36,13 @@ export async function fetchMatchPreview(matchId: string) {
     if (data.errors || !data.data) return null
     const game = data.data.discoverGame
     return {
-      home_team: game.home.name,
-      away_team: game.away.name,
-      date: game.date,
-      venue: game.allocation.court.venue.name,
-      competition: game.round.grade.season.competition.name,
+      home_team:    game.home.name,
+      away_team:    game.away.name,
+      date:         game.date,
+      venue:        game.allocation.court.venue.name,
+      competition:  game.round.grade.season.competition.name,
+      grade_id:     game.round.grade.id,
+      grade_name:   game.round.grade.name,
     }
   } catch {
     return null
