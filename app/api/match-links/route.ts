@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      // Auto-detect competition and grade from team names
       const detected = detectCompetition(
         preview.competition,
         preview.home_team,
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
           competition:   detected.competition,
           grade_name:    preview.grade_name,
           amateur_grade: detected.amateurGrade ?? null,
-          sanfl_grade:   detected.sanflGrade ?? null,
+          sanfl_grade:   detected.sanflGrade   ?? null,
           date:          preview.date,
           venue:         preview.venue,
           added_by:      addedBy,
@@ -60,7 +59,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      const gradeLabel = detected.amateurGrade ?? detected.sanflGrade ?? ''
+      const gradeLabel = detected.amateurGrade ?? detected.sanflGrade ?? detected.countryLeague ?? ''
       results.push({
         url, status: 'success',
         message: `Saved: ${preview.home_team} vs ${preview.away_team} → ${detected.competition}${gradeLabel ? ' · ' + gradeLabel : ''}`,

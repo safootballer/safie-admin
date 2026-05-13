@@ -1,10 +1,37 @@
 // lib/detectCompetition.ts
-// Auto-detects competition and grade from PlayHQ team names and competition name
 
 export interface CompetitionDetection {
   competition: string
   amateurGrade?: string
   sanflGrade?: string
+  countryLeague?: string
+}
+
+const COUNTRY_LEAGUE_MAP: Record<string, string> = {
+  'adelaide plains':            'adelaide-plains',
+  'barossa light & gawler':     'barossa',
+  'barossa light and gawler':   'barossa',
+  'eastern eyre':               'eastern-eyre',
+  'far north':                  'far-north',
+  'great flinders':             'great-flinders',
+  'great southern':             'great-southern',
+  'hills division 1':           'hills-div1',
+  'hills country division':     'hills-country',
+  'kangaroo island':            'kangaroo-island',
+  'kowree naracoorte tatiara':  'knt',
+  'limestone coast':            'limestone-coast',
+  'murray valley':              'murray-valley',
+  'mid south eastern':          'mid-south-eastern',
+  'north eastern':              'north-eastern',
+  'northern areas':             'northern-areas',
+  'port lincoln':               'port-lincoln',
+  'river murray':               'river-murray',
+  'riverland':                  'riverland',
+  'southern':                   'southern',
+  'spencer gulf':               'spencer-gulf',
+  'western eyre':               'western-eyre',
+  'whyalla':                    'whyalla',
+  'yorke peninsula':            'yorke-peninsula',
 }
 
 export function detectCompetition(
@@ -13,16 +40,24 @@ export function detectCompetition(
   awayTeam: string,
 ): CompetitionDetection {
   const comp  = playhqCompetition.toUpperCase()
+  const compLower = playhqCompetition.toLowerCase()
   const home  = homeTeam.toUpperCase()
   const away  = awayTeam.toUpperCase()
   const teams = `${home} ${away}`
 
-  // ── SANFLW — check before SANFL ───────────────────────────────────────────────
+  // ── Country Football — check by competition name ───────────────────────────
+  for (const [key, slug] of Object.entries(COUNTRY_LEAGUE_MAP)) {
+    if (compLower.includes(key)) {
+      return { competition: 'Country Football', countryLeague: slug }
+    }
+  }
+
+  // ── SANFLW — check before SANFL ───────────────────────────────────────────
   if (teams.includes('SANFLW') || comp.includes('SANFLW')) {
     return { competition: 'SANFLW' }
   }
 
-  // ── SANFL ─────────────────────────────────────────────────────────────────────
+  // ── SANFL ─────────────────────────────────────────────────────────────────
   if (comp.includes('SANFL')) {
     if (teams.includes('UNDER 16') || teams.includes('U16') || teams.includes('16S')) {
       return { competition: 'SANFL', sanflGrade: 'under-16' }
@@ -33,10 +68,10 @@ export function detectCompetition(
     return { competition: 'SANFL', sanflGrade: 'league' }
   }
 
-  // ── Adelaide Footy League (Men's + Women's) ───────────────────────────────────
+  // ── Adelaide Footy League (Men's + Women's) ───────────────────────────────
   if (comp.includes('ADELAIDE FOOTY LEAGUE') || comp.includes('AFL ')) {
 
-    // ── SAWFL Women's — W suffixes (check before M suffixes) ─────────────────
+    // SAWFL Women's — W suffixes
     if (teams.match(/\bW1R\b/)) return { competition: "SAWFL Women's", amateurGrade: 'division-1-reserves' }
     if (teams.match(/\bW2R\b/)) return { competition: "SAWFL Women's", amateurGrade: 'division-2-reserves' }
     if (teams.match(/\bW1\b/))  return { competition: "SAWFL Women's", amateurGrade: 'division-1' }
@@ -46,7 +81,7 @@ export function detectCompetition(
     if (teams.match(/\bW5\b/))  return { competition: "SAWFL Women's", amateurGrade: 'division-5' }
     if (teams.match(/\bW6\b/))  return { competition: "SAWFL Women's", amateurGrade: 'division-6' }
 
-    // ── Amateur (Men's) — Reserves first (M1R before M1) ─────────────────────
+    // Amateur Men's — Reserves first
     if (teams.match(/\bM1R\b/)) return { competition: 'Amateur', amateurGrade: 'division-1-reserves' }
     if (teams.match(/\bM2R\b/)) return { competition: 'Amateur', amateurGrade: 'division-2-reserves' }
     if (teams.match(/\bM3R\b/)) return { competition: 'Amateur', amateurGrade: 'division-3-reserves' }
@@ -55,7 +90,7 @@ export function detectCompetition(
     if (teams.match(/\bM6R\b/)) return { competition: 'Amateur', amateurGrade: 'division-6-reserves' }
     if (teams.match(/\bM7R\b/)) return { competition: 'Amateur', amateurGrade: 'division-7-reserves' }
 
-    // ── Amateur (Men's) — League divisions ───────────────────────────────────
+    // Amateur Men's — League
     if (teams.match(/\bM1\b/))  return { competition: 'Amateur', amateurGrade: 'division-1' }
     if (teams.match(/\bM2\b/))  return { competition: 'Amateur', amateurGrade: 'division-2' }
     if (teams.match(/\bM3\b/))  return { competition: 'Amateur', amateurGrade: 'division-3' }
@@ -64,7 +99,7 @@ export function detectCompetition(
     if (teams.match(/\bM6\b/))  return { competition: 'Amateur', amateurGrade: 'division-6' }
     if (teams.match(/\bM7\b/))  return { competition: 'Amateur', amateurGrade: 'division-7' }
 
-    // ── C-Grade ───────────────────────────────────────────────────────────────
+    // C-Grade
     if (teams.match(/\bC1\b/))  return { competition: 'Amateur', amateurGrade: 'division-c1' }
     if (teams.match(/\bC2\b/))  return { competition: 'Amateur', amateurGrade: 'division-c2' }
     if (teams.match(/\bC3\b/))  return { competition: 'Amateur', amateurGrade: 'division-c3' }
@@ -74,10 +109,9 @@ export function detectCompetition(
     if (teams.match(/\bC7\b/))  return { competition: 'Amateur', amateurGrade: 'division-c7' }
     if (teams.match(/\bC8\b/))  return { competition: 'Amateur', amateurGrade: 'division-c8' }
 
-    // Fallback — Amateur unknown grade
     return { competition: 'Amateur' }
   }
 
-  // ── Country Football ──────────────────────────────────────────────────────────
+  // Fallback
   return { competition: 'Country Football' }
 }
