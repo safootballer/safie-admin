@@ -2,12 +2,18 @@
 import { useState, useEffect } from 'react'
 
 export default function MatchesPage() {
-  const [data, setData]           = useState<any>(null)
-  const [loading, setLoading]     = useState(true)
-  const [page, setPage]           = useState(1)
-  const [expanded, setExpanded]   = useState<number | null>(null)
+  const [data, setData]             = useState<any>(null)
+  const [loading, setLoading]       = useState(true)
+  const [page, setPage]             = useState(1)
+  const [expanded, setExpanded]     = useState<number | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [publishResult, setPublishResult] = useState<{ type: string; text: string } | null>(null)
+
+  // Delete by date
+  const [deleteDate, setDeleteDate]       = useState('')
+  const [deleting, setDeleting]           = useState(false)
+  const [deleteResult, setDeleteResult]   = useState<{ type: string; text: string } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   async function load(p = 1) {
     setLoading(true)
@@ -25,16 +31,12 @@ export default function MatchesPage() {
 
   async function autoPublishAll() {
     if (!confirm(`This will auto-generate and publish reports for ALL active matches. Continue?`)) return
-    setPublishing(true)
-    setPublishResult(null)
+    setPublishing(true); setPublishResult(null)
     try {
       const res  = await fetch('/api/auto-publish-all', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setPublishResult({
-          type: 'success',
-          text: `🚀 Pipeline started for ${data.total} matches! Reports are generating in the background. Check your website in a few minutes.`,
-        })
+        setPublishResult({ type: 'success', text: `🚀 Pipeline started for ${data.total} matches! Reports are generating in the background.` })
       } else {
         setPublishResult({ type: 'error', text: `❌ ${data.error ?? 'Failed to start pipeline'}` })
       }
@@ -42,6 +44,30 @@ export default function MatchesPage() {
       setPublishResult({ type: 'error', text: `❌ ${e.message}` })
     }
     setPublishing(false)
+  }
+
+  async function deleteBeforeDate() {
+    if (!deleteDate) return
+    setDeleting(true); setDeleteResult(null)
+    try {
+      const res  = await fetch('/api/matches/delete-before-date', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beforeDate: deleteDate }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDeleteResult({ type: 'success', text: `✅ Deleted ${data.deleted} match link${data.deleted !== 1 ? 's' : ''} before ${deleteDate}` })
+        setConfirmDelete(false)
+        setDeleteDate('')
+        load(page)
+      } else {
+        setDeleteResult({ type: 'error', text: `❌ ${data.error ?? 'Delete failed'}` })
+      }
+    } catch (e: any) {
+      setDeleteResult({ type: 'error', text: `❌ ${e.message}` })
+    }
+    setDeleting(false)
   }
 
   return (
@@ -54,42 +80,99 @@ export default function MatchesPage() {
             Total matches: <strong style={{ color: '#fff' }}>{data?.total ?? '...'}</strong>
           </div>
         </div>
-
-        {/* Auto Publish All button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-          <button
-            onClick={autoPublishAll}
-            disabled={publishing}
-            style={{
-              background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
-              color: '#000', border: 'none', borderRadius: 10,
-              padding: '0.75rem 1.5rem',
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontWeight: 900, fontSize: '1rem',
-              letterSpacing: '0.04em', cursor: publishing ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-            }}
-          >
-            {publishing ? '⏳ Generating...' : '🚀 Auto Publish All'}
-          </button>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', textAlign: 'right' }}>
-            Generates & publishes reports for all matches
-          </div>
-        </div>
+        <button
+          onClick={autoPublishAll}
+          disabled={publishing}
+          style={{
+            background: publishing ? 'rgba(230,254,0,0.3)' : '#e6fe00',
+            color: '#000', border: 'none', borderRadius: 10,
+            padding: '0.75rem 1.5rem',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontWeight: 900, fontSize: '1rem',
+            cursor: publishing ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {publishing ? '⏳ Generating...' : '🚀 Auto Publish All'}
+        </button>
       </div>
 
-      {/* Result message */}
+      {/* Auto publish result */}
       {publishResult && (
         <div style={{
           padding: '1rem 1.25rem', borderRadius: 10, marginBottom: '1.5rem',
           background: publishResult.type === 'success' ? 'rgba(5,46,22,0.8)' : 'rgba(45,0,0,0.8)',
           border: `1px solid ${publishResult.type === 'success' ? '#4ade80' : '#f87171'}`,
           color: publishResult.type === 'success' ? '#4ade80' : '#f87171',
-          fontSize: '0.875rem', fontWeight: 500, lineHeight: 1.5,
+          fontSize: '0.875rem', fontWeight: 500,
         }}>
           {publishResult.text}
         </div>
       )}
+
+      {/* Delete by date */}
+      <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid #f87171' }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: '#f87171', marginBottom: '0.75rem' }}>
+          🗑️ Delete Match Links Before Date
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="date"
+            value={deleteDate}
+            onChange={e => { setDeleteDate(e.target.value); setConfirmDelete(false); setDeleteResult(null) }}
+            style={{
+              padding: '0.6rem 0.875rem', border: '1.5px solid rgba(248,113,113,0.4)',
+              borderRadius: 8, background: 'rgba(255,255,255,0.05)',
+              color: '#fff', fontSize: '0.875rem', outline: 'none',
+            }}
+          />
+          {deleteDate && !confirmDelete && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{
+                background: 'transparent', border: '1.5px solid #f87171',
+                color: '#f87171', borderRadius: 8, padding: '0.6rem 1.25rem',
+                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+              }}
+            >
+              Delete Before {deleteDate}
+            </button>
+          )}
+          {confirmDelete && (
+            <>
+              <span style={{ color: '#f87171', fontWeight: 700, fontSize: '0.875rem' }}>Are you sure?</span>
+              <button
+                onClick={deleteBeforeDate}
+                disabled={deleting}
+                style={{
+                  background: '#f87171', color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '0.6rem 1.25rem',
+                  fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                }}
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '0.6rem 1.25rem',
+                  fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+        {deleteResult && (
+          <div style={{
+            marginTop: '0.75rem', fontSize: '0.85rem', fontWeight: 600,
+            color: deleteResult.type === 'success' ? '#4ade80' : '#f87171',
+          }}>
+            {deleteResult.text}
+          </div>
+        )}
+      </div>
 
       {loading ? <p style={{ color: 'rgba(255,255,255,0.4)' }}>Loading...</p> : (
         <>
@@ -101,7 +184,7 @@ export default function MatchesPage() {
                   style={{ padding: '0.875rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: expanded === m.id ? 'rgba(44,163,238,0.06)' : 'transparent' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ fontSize: '1rem' }}>🏈</span>
+                    <span>🏈</span>
                     <div>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '1rem' }}>
                         {m.home_team} vs {m.away_team}
