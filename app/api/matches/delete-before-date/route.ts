@@ -12,15 +12,24 @@ export async function POST(req: NextRequest) {
 
   const cutoff = new Date(beforeDate).toISOString()
 
+  // Delete from match_links
   const links = await prisma.matchLink.findMany({
     where: { added_at: { lt: cutoff } },
-    select: { id: true },
+    select: { id: true, match_id: true },
   })
 
   if (!links.length) {
     return NextResponse.json({ success: true, deleted: 0 })
   }
 
+  const matchIds = links.map(l => l.match_id)
+
+  // Delete from matches table too
+  await prisma.match.deleteMany({
+    where: { match_id: { in: matchIds } },
+  })
+
+  // Delete from match_links
   await prisma.matchLink.deleteMany({
     where: { added_at: { lt: cutoff } },
   })
