@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, deleted: 0 })
   }
 
-  const matchIds = links.map(l => l.match_id)
+  const matchIds = links.map((l: { id: number; match_id: string }) => l.match_id)
 
   // Delete from matches table too
   await prisma.match.deleteMany({
