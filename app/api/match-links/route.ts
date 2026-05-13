@@ -48,7 +48,9 @@ export async function POST(req: NextRequest) {
           home_team:     preview.home_team,
           away_team:     preview.away_team,
           competition:   detected.competition,
-          grade_name:    preview.grade_name,
+          grade_name:    detected.competition === 'Country Football'
+                           ? preview.competition  // save raw PlayHQ league name
+                           : preview.grade_name,
           amateur_grade: detected.amateurGrade ?? null,
           sanfl_grade:   detected.sanflGrade   ?? null,
           date:          preview.date,
