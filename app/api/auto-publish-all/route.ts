@@ -10,24 +10,34 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Get all active match links that have match data in DB
+  // Get start of today in ISO format
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const todayStartISO = todayStart.toISOString()
+
+  // Only get match links added today
   const links = await prisma.matchLink.findMany({
-    where: { is_active: 1 },
-    orderBy: { added_at: 'desc' },
+    where: {
+      is_active: 1,
+      added_at: { gte: todayStartISO },
+    },
+    orderBy: { added_at: 'asc' },
   })
 
   if (!links.length) {
-    return NextResponse.json({ success: false, error: 'No active match links found' }, { status: 404 })
+    return NextResponse.json({
+      success: false,
+      error: 'No match links added today found',
+    }, { status: 404 })
   }
 
-  // Fire all in background — return immediately
+  // Return immediately — process in background
   const responsePromise = NextResponse.json({
     success: true,
-    message: `Auto-publish pipeline started for ${links.length} matches`,
+    message: `Auto-publish pipeline started for ${links.length} matches added today`,
     total: links.length,
   })
 
-  // Process all matches in background
   ;(async () => {
     const results: { matchId: string; status: string; slug?: string; error?: string }[] = []
 
